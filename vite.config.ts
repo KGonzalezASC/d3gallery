@@ -8,6 +8,7 @@ import { loadEnv } from 'vite';
 export default defineConfig({
     //load env
     env: loadEnv('development', process.cwd()),
+    base: '/d3gallery/',
     plugins: [
         react(),
     ],
