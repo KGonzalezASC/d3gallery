@@ -2,7 +2,7 @@ import {useEffect, useState} from 'react';
 import Papa from 'papaparse';
 
 
-export const useLineChartData = (currentIndex) => {
+export const useLineChartData = (currentIndex: number) => {
     const [data, setData] = useState<number[]>([10, 25, 70, 45, 60, 46, 44, 60, 32, 80, 40, 99]);
 
     // Function to add a new random data point
@@ -65,7 +65,7 @@ export const cleanGameData = (game) => {
 };
 
 
-export const useDonutChartData = (currentIndex) => {
+export const useDonutChartData = (currentIndex:number) => {
     const [donutData, setDonutData] = useState([]);
 
     useEffect(() => {
@@ -94,7 +94,7 @@ export const useDonutChartData = (currentIndex) => {
     return donutData;
 };
 
-export const useTemtemChartData = (currentIndex) => {
+export const useTemtemChartData = (currentIndex: number) => {
     const [histogramData, setHistogramData] = useState([]);
 
     useEffect(() => {
@@ -102,16 +102,16 @@ export const useTemtemChartData = (currentIndex) => {
 
         const fetchDataAndParse = async () => {
             try {
-                const response = await fetch('/temtemData.csv'); // Adjust the path as needed
+                const response = await fetch('./temtemData.csv'); // Adjust the path as needed
                 if (!response.ok) {
                     throw new Error(`HTTP error status: ${response.status}`);
                 }
                 const text = await response.text();
                 Papa.parse(text, {
                     header: true,
-                    complete: (results) => {
+                    complete: ({data}) => {
                         if (isMounted) {
-                            setHistogramData(results.data);
+                            setHistogramData(data);
                         }
                        // console.log("Parsed Data:", results.data);
                     },
@@ -148,12 +148,12 @@ type FinancialSheet = {
 };
 
 
-export const FinancialSheetComponent = ( currentindex ) => {
+export const FinancialSheetComponent = ( currentIndex : number) => {
     const [financialSheetData, setFinancialSheetData] = useState<FinancialSheet | null>(null);
 
     useEffect(() => {
         const prepareFinancialData = () => {
-            if (currentindex === 8) {
+            if (currentIndex === 8) {
                 const data = {
                     "name": "FinancialSheet",
                     "children": [
@@ -296,7 +296,7 @@ export const FinancialSheetComponent = ( currentindex ) => {
         }
 
         prepareFinancialData();
-    }, [currentindex]);
+    }, [currentIndex]);
 
     return financialSheetData;
 };
@@ -307,8 +307,6 @@ export const BtcRealTimePrice = ({ currentIndex }: { currentIndex: number }) => 
 
     useEffect(() => {
         let isMounted = true; // Flag to prevent state updates after unmount
-        let intervalId: NodeJS.Timeout | undefined;
-
         const fetchBtcPrice = async () => {
             try {
                 const response = await fetch('/btc');
@@ -320,7 +318,7 @@ export const BtcRealTimePrice = ({ currentIndex }: { currentIndex: number }) => 
                 if (isMounted && price !== null) {
                     // Check if the last price in the array is different from the new price
                     const lastPrice = btcPrices[btcPrices.length - 1];
-                    if (lastPrice === undefined || parseFloat(lastPrice) !== parseFloat(price)) {
+                    if (lastPrice === undefined || parseFloat(String(lastPrice)) !== parseFloat(price)) {
                         setBtcPrices(prevPrices => [...prevPrices, parseFloat(price)]);
                         // console.log("Fetched BTC Price:", price);
                     }
@@ -334,7 +332,7 @@ export const BtcRealTimePrice = ({ currentIndex }: { currentIndex: number }) => 
         fetchBtcPrice();
 
         // Set up the interval to fetch the price every 2600ms
-        intervalId = setInterval(fetchBtcPrice, 2600);
+        const intervalId: NodeJS.Timeout | undefined = setInterval(fetchBtcPrice, 2600);
 
         return () => {
             if (intervalId) {
