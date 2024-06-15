@@ -35,7 +35,7 @@ const LineChart: FC<LineChartProps> = ({ data }) => {
         // Axes
         const xAxis = d3.axisBottom(xScale)
             .ticks(data.length)
-            .tickFormat((d, i) => (i + 1).toString());
+            .tickFormat((_d, i) => (i + 1).toString());
 
         const yAxis = d3.axisLeft(yScale).ticks(7);
 
@@ -48,7 +48,7 @@ const LineChart: FC<LineChartProps> = ({ data }) => {
             .attr("stroke", "steelblue")
             .attr("stroke-width", 1.5)
             .attr("d", d3.line<number>()
-                .x((d, i) => xScale(i))
+                .x((_d, i) => xScale(i))
                 .y(d => yScale(d))
                 .curve(d3.curveCardinal));
 
@@ -67,23 +67,23 @@ const LineChart: FC<LineChartProps> = ({ data }) => {
 
         // Draw circles
         svg.selectAll<SVGCircleElement, number>(".circle")
-            .data(data, (d, i) => i.toString())
+            .data(data, (_d, i) => i.toString())
             .join<SVGCircleElement>(
                 (enter) => enter.append("circle")
                     .attr("class", "circle")
-                    .attr("cx", (d, i) => xScale(i))
+                    .attr("cx", (_d, i) => xScale(i))
                     .attr("cy", h)
                     .attr("r", 5)
                     .style("fill", "red")
                     .transition()
                     .duration(400)
-                    .delay((d, i) => i * 50)
+                    .delay((_d, i) => i * 50)
                     .attr("cy", d => yScale(d))
-                    .attr("cx", (d, i) => xScale(i)),
+                    .attr("cx", (_d, i) => xScale(i)),
                 (update) => update.transition()
                     .duration(1000)
                     .attr("cy", d => yScale(d))
-                    .attr("cx", (d, i) => xScale(i))
+                    .attr("cx", (_d, i) => xScale(i))
                     .style("fill", "orange"),
                 (exit) => exit.transition()
                     .duration(600)

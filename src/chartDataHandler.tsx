@@ -52,10 +52,10 @@ export const fetchSteamDataViaProxy = async () => {
 };
 
 // Helper function to clean game data and convert playtime to hours
-export const cleanGameData = (game) => {
+export const cleanGameData = (game: { [x: string]: number; }) => {
     const playtimeKeys = ['playtime_forever', 'playtime_windows_forever', 'playtime_mac_forever', 'playtime_linux_forever', 'playtime_deck_forever'];
 
-    let cleanedGame = {...game};
+    const cleanedGame = {...game};
 
     playtimeKeys.forEach(key => {
         cleanedGame[key] = game[key] / 60; // Convert playtime from minutes to hours
@@ -76,7 +76,7 @@ export const useDonutChartData = (currentIndex:number) => {
             if (isMounted) {
                 //only sets data once due to mount check
                 const cleanedData = data.response.games.map(cleanGameData);
-                const filteredData = cleanedData.filter(game => game.playtime_forever > 101);
+                const filteredData = cleanedData.filter((game: { playtime_forever: number; }) => game.playtime_forever > 101);
                 setDonutData(filteredData);
             }
         };
@@ -111,6 +111,7 @@ export const useTemtemChartData = (currentIndex: number) => {
                     header: true,
                     complete: ({data}) => {
                         if (isMounted) {
+                            //copy and paste in temtemData type later when pushed to github
                             setHistogramData(data);
                         }
                        // console.log("Parsed Data:", results.data);

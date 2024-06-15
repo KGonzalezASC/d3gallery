@@ -1,11 +1,11 @@
-import React, { FC, useEffect, useRef, useState } from "react";
+import { FC, useEffect, useRef } from "react";
 import * as d3 from 'd3';
 
 interface Node {
     id: number;
     name: string;
     maxWeeklyRevenue?: number;
-    monthlyViewData?: { views: number }[];
+    monthlyViewData?: { date: string; views: number }[];
     totalViews?: number;
 }
 
@@ -15,7 +15,6 @@ interface LineChartFDGProps {
 
 export const LineChartFDG: FC<LineChartFDGProps> = ({ data }) => {
     const svgRef = useRef<SVGSVGElement | null>(null);
-    const sizeConstant = 0.000000000302;
     const width = 340;
     const height = 340;
 
@@ -27,46 +26,52 @@ export const LineChartFDG: FC<LineChartFDGProps> = ({ data }) => {
             .style("overflow", "visible")
             .attr("viewBox", `0 0 ${width} ${height}`)
             .style("background", "#c5f6fa");
-        //double check if needed
+
+        // Clear previous elements
         svg.selectAll("*").remove();
 
-
+        // Flatten all monthly view data
         const allMonthlyViewData = data.flatMap(node => node.monthlyViewData || []);
+
+        // Get max and min values for views
         const maxTotalViews = d3.max(allMonthlyViewData, d => d.views) || 0;
         const minTotalViews = d3.min(allMonthlyViewData, d => d.views) || 0;
 
-        //yscale
+        // Y scale
         const yScale = d3.scaleLinear()
             .domain([minTotalViews, maxTotalViews])
             .range([height, 50]);
-        //xscale by date
+
+        // X scale by date
         const xScale = d3.scaleTime()
             .domain(d3.extent(allMonthlyViewData, d => new Date(d.date)) as [Date, Date])
             .range([50, width]);
 
-        //append axis
-
+        // Append Y axis
         svg.append("g")
             .attr("transform", `translate(${50}, -50)`)
             .call(d3.axisLeft(yScale));
 
+        // Append X axis
         svg.append("g")
             .attr("transform", `translate(0, ${height - 50})`)
-            .call(d3.axisBottom(xScale)
+            .call(d3.axisBottom<Date>(xScale)
                 .ticks(d3.timeMonth.every(2))
-                .tickFormat(d3.timeFormat('%b %Y')))
+                .tickFormat((date: Date) => d3.timeFormat('%b %Y')(date)))
             .selectAll('text')
             .style('text-anchor', 'start')
             .attr('transform', 'rotate(90)')
             .attr('x', 10)
             .attr('y', -5);
 
-        //line generator and appending
+
+        // Line generator
         const line = d3.line<{ date: string; views: number }>()
             .x(d => xScale(new Date(d.date)))
-            .y(d => yScale(d.views)-50)
+            .y(d => yScale(d.views) - 50)
             .curve(d3.curveMonotoneX);
 
+        // Draw lines for each node's monthly view data
         data.forEach(node => {
             if (node.monthlyViewData) {
                 svg.append("path")

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, FC } from 'react';
+import { useRef, useEffect, FC } from 'react';
 import * as d3 from 'd3';
 
 interface LineChartProps {
@@ -21,19 +21,22 @@ const LineChartBTC: FC<LineChartProps> = ({ data }) => {
             .style("background", "#c5f6fa");
 
         // Scales
+        const filteredData = data.filter(d => d !== undefined) as number[];
+
+        // Scales
         const xScale = d3.scaleLinear()
-            .domain([0, data.length - 1])
-            .range([30, w-30]);
+            .domain([0, filteredData.length - 1])
+            .range([30, w - 30]);
 
         // Use a logarithmic scale for the y-axis to better fit the range of cryptocurrency prices
         const yScale = d3.scaleLog()
-            .domain([d3.min(data) , d3.max(data)])
+            .domain([d3.min(filteredData) || 1, d3.max(filteredData) || 1])
             .range([h, 0]);
 
         // Axes
         const xAxis = d3.axisBottom(xScale)
-            .ticks(data.length)
-            .tickFormat((d, i) => (i + 1).toString());
+            .ticks(filteredData.length)
+            .tickFormat((_d, i) => (i + 1).toString());
 
         const yAxis = d3.axisLeft(yScale);
 
@@ -46,7 +49,7 @@ const LineChartBTC: FC<LineChartProps> = ({ data }) => {
             .attr("stroke", "steelblue")
             .attr("stroke-width", 1.5)
             .attr("d", d3.line<number>()
-                .x((d, i) => xScale(i))
+                .x((_d, i) => xScale(i))
                 .y(d => yScale(d))
                 .curve(d3.curveBasis));
 
@@ -65,23 +68,23 @@ const LineChartBTC: FC<LineChartProps> = ({ data }) => {
 
         // Draw circles
         svg.selectAll<SVGCircleElement, number>(".circle")
-            .data(data, (d, i) => i.toString())
+            .data(data, (_d, i) => i.toString())
             .join<SVGCircleElement>(
                 (enter) => enter.append("circle")
                     .attr("class", "circle")
-                    .attr("cx", (d, i) => xScale(i))
+                    .attr("cx", (_d, i) => xScale(i))
                     .attr("cy", h)
                     .attr("r", 5)
                     .style("fill", "red")
                     .transition()
                     .duration(400)
-                    .delay((d, i) => i * 50)
+                    .delay((_d, i) => i * 50)
                     .attr("cy", d => yScale(d))
-                    .attr("cx", (d, i) => xScale(i)),
+                    .attr("cx", (_d, i) => xScale(i)),
                 (update) => update.transition()
                     .duration(1000)
                     .attr("cy", d => yScale(d))
-                    .attr("cx", (d, i) => xScale(i))
+                    .attr("cx", (_d, i) => xScale(i))
                     .style("fill", "orange"),
                 (exit) => exit.transition()
                     .duration(600)
@@ -94,7 +97,6 @@ const LineChartBTC: FC<LineChartProps> = ({ data }) => {
     if (!data) {
         return (
             <>
-                <LoadingSpinner />
                 <p>Loading...</p>
             </>
         );

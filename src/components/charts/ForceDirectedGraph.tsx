@@ -4,16 +4,19 @@ import Modal from "react-modal";
 import { debounce } from 'lodash';
 import Draggable from "react-draggable";
 import {LineChartFDG} from "@/components/charts/lineChartFDG.tsx";
-import ErrorBoundary from "@/components/errorBoundary.tsx";
 
 Modal.setAppElement('#root');
 
-interface Node {
+interface Node  extends d3.SimulationNodeDatum {
     id: number;
     name: string;
     maxWeeklyRevenue?: number;
-    monthlyViewData?: { views: number }[];
+    monthlyViewData?: { date: string; views: number }[];
     totalViews?: number;
+    x?: number;
+    y?: number;
+    fx?: number | null;
+    fy?: number | null;
 }
 
 interface Edge {
@@ -46,18 +49,18 @@ export const ForceDirectedGraph: FC<ForceDirectedProps> = ({ data }) => {
     const debouncedSetSelectedNodes = useCallback(debounce(setSelectedNodes,8), []);
 
     // Handle brushing
-    const handleBrush = (event: d3.D3BrushEvent<any>) => {
+    const handleBrush = (event: d3.D3BrushEvent<SVGSVGElement | null>) => {
         const selection = event.selection;
-        if (selection === null) return;
-        const [[x0, y0], [x1, y1]] = selection;
-        const brushedNodes = data.nodes.filter((d: any) =>
-            d.name !== 'Omnia-Media' && d.x >= x0 && d.x <= x1 && d.y >= y0 && d.y <= y1
+        if (!selection) return;
+        const [[x0, y0], [x1, y1]] = selection as [[number, number], [number, number]];
+        const brushedNodes = data.nodes.filter((d: Node) =>
+            d.name !== 'Omnia-Media' && d.x! >= x0 && d.x! <= x1 && d.y! >= y0 && d.y! <= y1
         );
         debouncedSetSelectedNodes(brushedNodes);
 
-        d3.select(nodeGroupRef.current)
-            .selectAll("circle")
-            .attr("fill", (d: any) => brushedNodes.includes(d) ? "red" : "#69b3a2");
+        d3.select<SVGGElement, Node>(nodeGroupRef.current!)
+            .selectAll<SVGCircleElement, Node>("circle")
+            .attr("fill", (d: Node) => brushedNodes.includes(d) ? "red" : "#69b3a2");
     };
 
     const createBrush = () => {
@@ -106,40 +109,42 @@ export const ForceDirectedGraph: FC<ForceDirectedProps> = ({ data }) => {
 
         // Create the force simulation
         const simulation = d3.forceSimulation(data.nodes)
-            .force("link", d3.forceLink(data.edges).id((d: any) => d.id).distance(130))
+            .force("link", d3.forceLink<Node,Edge>(data.edges).id((d: Node) => d.id).distance(130))
             .force("charge", d3.forceManyBody().strength(-270)) // affects rotation speed to some degree
             .force("center", d3.forceCenter(width / 2, height / 2));
 
         // Define drag behaviour:
-        const drag = (simulation: any) => {
-            const dragstarted = (event: any, d: any) => {
+
+        const drag = (simulation: d3.Simulation<Node, Edge>) => {
+            const dragStarted = (event: d3.D3DragEvent<SVGCircleElement, Node, d3.SimulationNodeDatum>) => {
                 if (!event.active) simulation.alphaTarget(0.3).restart();
-                d.fx = d.x;
-                d.fy = d.y;
-                simulation.force("link", d3.forceLink(data.edges).id((d: any) => d.id).distance(300));
+                event.subject.fx = event.subject.x;
+                event.subject.fy = event.subject.y;
+                simulation.force("link", d3.forceLink<Node, Edge>(data.edges).id((d: Node) => String(d.id)).distance(300));
             };
 
-            const dragged = (event: any, d: any) => {
-                d.fx = Math.max(10, Math.min(width - 10, event.x));
-                d.fy = Math.max(10, Math.min(height - 10, event.y));
+            const dragged = (event: d3.D3DragEvent<SVGCircleElement, Node, d3.SimulationNodeDatum>) => {
+                event.subject.fx = Math.max(10, Math.min(width - 10, event.x));
+                event.subject.fy = Math.max(10, Math.min(height - 10, event.y));
             };
 
-            const dragended = (event: any, d: any) => {
+            const dragEnded = (event: d3.D3DragEvent<SVGCircleElement, Node, d3.SimulationNodeDatum>) => {
                 if (!event.active) simulation.alphaTarget(0);
-                d.fx = null;
-                d.fy = null;
-                simulation.force("link", d3.forceLink(data.edges).id((d: any) => d.id).distance(210));
+                event.subject.fx = null;
+                event.subject.fy = null;
+                simulation.force("link", d3.forceLink<Node, Edge>(data.edges).id((d: Node) => String(d.id)).distance(210));
             };
 
-            return d3.drag()
-                .on("start", dragstarted)
+            return d3.drag<SVGCircleElement, Node>()
+                .on("start", dragStarted)
                 .on("drag", dragged)
-                .on("end", dragended);
+                .on("end", dragEnded);
         };
 
+
         // Draw links
-        const link = linkGroup.selectAll("line")
-            .data(data.edges, (d: any) => `${d.source}-${d.target}`)
+        const link = linkGroup.selectAll<SVGLineElement, Edge>("line")
+            .data(data.edges, (d: Edge) => `${d.source}-${d.target}`)
             .join(
                 enter => enter.append("line")
                     .attr("stroke", "#ff0000")
@@ -150,15 +155,16 @@ export const ForceDirectedGraph: FC<ForceDirectedProps> = ({ data }) => {
             );
 
 
+
         // Draw nodes
-        const node = nodeGroup.selectAll("circle")
-            .data(data.nodes, (d: any) => d.id)
+        const node = nodeGroup.selectAll<SVGCircleElement, Node>("circle")
+            .data(data.nodes, (d: Node) => d.id.toString())
             .join(
                 enter => {
                     const circle = enter.append("circle")
                         .attr("r", d => {
-                            const baseRadius = d.name === 'Omnia-Media' ? centralNodeSize : d.totalViews * sizeConstant ;
-                            return Math.max(5, baseRadius) // Ensure minimum radius for selection purposes and visual appeal
+                            const baseRadius = d.name === 'Omnia-Media' ? centralNodeSize : (d.totalViews || 0) * sizeConstant;
+                            return Math.max(5, baseRadius); // Ensure minimum radius for selection purposes and visual appeal
                         })
                         .attr("fill", "#69b3a2");
 
@@ -189,22 +195,29 @@ export const ForceDirectedGraph: FC<ForceDirectedProps> = ({ data }) => {
         // Update positions on each tick
         simulation.on("tick", () => {
             link
-                .attr("x1", (d: any) => (d.source as any).x)
-                .attr("y1", (d: any) => (d.source as any).y)
-                .attr("x2", (d: any) => (d.target as any).x)
-                .attr("y2", (d: any) => (d.target as any).y);
-
+                .attr("x1", (d: d3.SimulationLinkDatum<Node>) => (d.source as Node).x!)
+                .attr("y1", (d: d3.SimulationLinkDatum<Node>) => (d.source as Node).y!)
+                .attr("x2", (d: d3.SimulationLinkDatum<Node>) => (d.target as Node).x!)
+                .attr("y2", (d: d3.SimulationLinkDatum<Node>) => (d.target as Node).y!);
             node
-                .attr("cx", (d: any) => d.x = Math.max(10, Math.min(width - 10, d.x)))
-                .attr("cy", (d: any) => d.y = Math.max(10, Math.min(height - 10, d.y)));
+                .attr("cx", (d: Node) => d.x = Math.max(10, Math.min(width - 10, d.x!)))
+                .attr("cy", (d: Node) => d.y = Math.max(10, Math.min(height - 10, d.y!)));
 
             // Constantly update selection and node color
             if (isBrushingEnabled) {
                 const brushNode = svg.select('.brush').node() as SVGGElement;
-                const brushSelection = brushNode ? d3.brushSelection(brushNode) : null;
-                if (brushSelection) {
-                    //code is now consistent with D.R.Y. principles
-                    handleBrush({ selection: brushSelection } as d3.D3BrushEvent<any>);
+                if (brushNode) {
+                    const brushBehavior = d3.brush<SVGGElement>()
+                        .extent([[0, 0], [width, height]])
+                        .on("brush", handleBrush);
+
+                    const brushSelection = d3.brushSelection(brushNode);
+
+                    if (brushSelection) {
+                        brushBehavior.move(d3.select(brushNode), brushSelection);
+                    } else {
+                        brushBehavior.clear(d3.select(brushNode));
+                    }
                 }
             }
         });
@@ -226,7 +239,7 @@ export const ForceDirectedGraph: FC<ForceDirectedProps> = ({ data }) => {
         //set nodes via debounce
         debouncedSetSelectedNodes([]); //solution : o
         setModalIsOpen(false);
-        const svg = d3.select(svgRef.current);
+        const svg = d3.select<SVGSVGElement, unknown>(svgRef.current!);
         d3.select(nodeGroupRef.current)
             .selectAll("circle")
             .attr("fill", "#69b3a2");
@@ -244,7 +257,7 @@ export const ForceDirectedGraph: FC<ForceDirectedProps> = ({ data }) => {
                         setIsBrushingEnabled(!isBrushingEnabled);
                         if (!isBrushingEnabled) {
                             debouncedSetSelectedNodes([]); //solution : o
-                            const svg = d3.select(svgRef.current);
+                            const svg = d3.select<SVGSVGElement, unknown>(svgRef.current!);
                             applyBrush(svg, false); // Remove brush
                         }
                     }}
