@@ -10,7 +10,14 @@ import {
 import {Suspense, useEffect, useRef, useState} from 'react';
 import LineChart from "@/components/charts/lineChart";
 import Autoplay from "embla-carousel-autoplay";
-import {Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious} from '@/components/ui/carousel';
+import {
+    Carousel,
+    CarouselApi,
+    CarouselContent,
+    CarouselItem,
+    CarouselNext,
+    CarouselPrevious
+} from '@/components/ui/carousel';
 import {DonutChart} from "@/components/charts/donutChart";
 import {HistogramChart} from "@/components/charts/histogramChart.tsx";
 import {ScatterplotQRChart} from "@/components/charts/scatterplotQRChart.tsx";
@@ -19,8 +26,9 @@ import {ForceDirectedGraph} from "@/components/charts/ForceDirectedGraph.tsx";
 import {PartitionChart} from "@/components/charts/partitionChart.tsx";
 import LineChartBTC from "@/components/charts/lineChartBTC.tsx";
 
+
 const App: React.FC = () => {
-    const [api, setApi] = useState(null);
+    const [api, setApi] = useState<null | CarouselApi>(null);
     const [current, setCurrent] = useState(0);
     const { data } = useLineChartData(current);
     const donutData  = useDonutChartData(current);
@@ -35,7 +43,7 @@ const App: React.FC = () => {
 
 
     //pass these into background of each svg instead itll prop look nicer
-    const backgroundColors = [
+    const backgroundColors: string[] = [
         // 'bg-blue-100', // Background for slide 1
         // 'bg-green-100', // Background for slide 2
         // 'bg-yellow-100', // Background for slide 3
@@ -55,28 +63,23 @@ const App: React.FC = () => {
     }
 
     useEffect(() => {
-        if (!api) {
-            return;
-        }
+        if (api) {
+            setCurrent(api.selectedScrollSnap() + 1);
 
-        setCurrent(api.selectedScrollSnap() + 1)
+            const handleSelect = () => {
+                setCurrent(api.selectedScrollSnap() + 1);
+            };
 
-        api.on('select', () => {
-            setCurrent(api.selectedScrollSnap() + 1)
-        });
+            api.on('select', handleSelect);
 
-        // //on resize
-        // api.on('resize', () => {
-        //     //could use for future responsive behaviour and or sum else
-        // });
-
-        //cleanup off in case of unmount
-        return () => {
-            api.off('select');
-            api.off('resize');
-            api.destroy();
+            return () => {
+                api.off('select', handleSelect);
+                // api.off('resize'); // Optionally remove other event listeners if needed
+                api.destroy();
+            };
         }
     }, [api]);
+
 
 
     return (

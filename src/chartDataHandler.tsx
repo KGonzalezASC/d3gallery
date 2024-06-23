@@ -1,5 +1,6 @@
 import {useEffect, useState} from 'react';
 import Papa from 'papaparse';
+import {Temtem} from "@/lib/temtem.ts";
 
 
 export const useLineChartData = (currentIndex: number) => {
@@ -95,8 +96,7 @@ export const useDonutChartData = (currentIndex:number) => {
 };
 
 export const useTemtemChartData = (currentIndex: number) => {
-    const [histogramData, setHistogramData] = useState([]);
-
+    const [histogramData, setHistogramData] = useState<Temtem[]>([]);
     useEffect(() => {
         let isMounted = true; // Flag to prevent state updates after unmount
 
@@ -107,7 +107,7 @@ export const useTemtemChartData = (currentIndex: number) => {
                     throw new Error(`HTTP error status: ${response.status}`);
                 }
                 const text = await response.text();
-                Papa.parse(text, {
+                Papa.parse<Temtem>(text, {
                     header: true,
                     complete: ({data}) => {
                         if (isMounted) {
@@ -116,8 +116,8 @@ export const useTemtemChartData = (currentIndex: number) => {
                         }
                        // console.log("Parsed Data:", results.data);
                     },
-                    error: (error) => {
-                        console.error("Error parsing CSV:", error);
+                    error: (parseError: Error) => {
+                        console.error("Error parsing CSV:", parseError);
                     }
                 });
             } catch (error) {
@@ -125,7 +125,7 @@ export const useTemtemChartData = (currentIndex: number) => {
             }
         };
 
-        if(currentIndex == 3  || currentIndex == 2 || currentIndex == 4) {
+        if(currentIndex == 2  || currentIndex == 3 || currentIndex == 4) {
             fetchDataAndParse().then(() => console.log("Histogram Data sourced from CSV"));
         }
         return () => {

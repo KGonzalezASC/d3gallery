@@ -13,27 +13,29 @@ type CarouselProps = {
     opts?: CarouselOptions
     plugins?: CarouselPlugin
     orientation?: "horizontal" | "vertical"
-    setApi?: (api: CarouselApi) => (value: (((prevState: null) => null) | null)) => void
+    setApi?: (api: CarouselApi | null) => void
+    // setApi?: (api: CarouselApi ) => (value: (((prevState: null) => null) | null)) => void
 }
 
 type CarouselContextProps = {
     carouselRef: ReturnType<typeof useEmblaCarousel>[0]
-    api: ReturnType<typeof useEmblaCarousel>[1]
+    api: CarouselApi
     scrollPrev: () => void
     scrollNext: () => void
     canScrollPrev: boolean
     canScrollNext: boolean
+    isScrolling: boolean
 } & CarouselProps
 
 const CarouselContext = React.createContext<CarouselContextProps | null>(null)
 
-function useCarousel() {
+const useCarousel = () => {
     const context = React.useContext(CarouselContext)
     if (!context) {
         throw new Error("useCarousel must be used within a <Carousel />")
     }
     return context
-}
+};
 
 const Carousel = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement> & CarouselProps>(
     ({ orientation = "horizontal", opts, setApi, plugins, className, children, ...props }, ref) => {
@@ -138,7 +140,8 @@ const CarouselContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HT
                 className={cn(
                     //GOT IT also ty p-0
                     isScrolling ? "p-full duration-500" : "p-[.019rem] duration-1050",
-                    "flex gap-[32rem] transition-transform pb-0  ",
+                    "flex gap-[32rem] transition-transform pb-0 ",
+                    orientation === "horizontal" ? "flex-row" : "flex-col",
                     className
                 )}
                 {...props}

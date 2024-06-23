@@ -1,13 +1,15 @@
 import { useRef, useEffect, useState, FC } from 'react';
 import * as d3 from 'd3';
+import {Temtem} from "@/lib/temtem.ts";
+import {Bin} from "d3";
 
 interface HistogramChartProps {
-    data?: any[]
+    data: Temtem[]
 }
 
 export const HistogramChart: FC<HistogramChartProps> = ({ data }) => {
     const svgRef = useRef<SVGSVGElement | null>(null);
-    const [currentStat, setCurrentStat] = useState('sta');
+    const [currentStat, setCurrentStat] = useState<keyof Temtem>('sta');
     const w = 620;
     const h = 500;
 
@@ -23,27 +25,28 @@ export const HistogramChart: FC<HistogramChartProps> = ({ data }) => {
         // Add more values as needed to create a smooth gradient
     ];
 
-    const getColor = (value)=>{
-        if(value <= 49){
+    const getColor = (value: number) => {
+        if (value <= 49) {
             return desaturatedColorScale[0];
-        }else if(value <= 50){
+        } else if (value <= 50) {
             return desaturatedColorScale[1];
-        }else if(value <= 70){
+        } else if (value <= 70) {
             return desaturatedColorScale[2];
-        }else if(value <= 80){
+        } else if (value <= 80) {
             return desaturatedColorScale[3];
-        }else if(value <= 90){
+        } else if (value <= 90) {
             return desaturatedColorScale[4];
-        }else if(value <= 100){
+        } else if (value <= 100) {
             return desaturatedColorScale[5];
-        }else{
+        } else {
             return desaturatedColorScale[6];
         }
-    }
+    };
+
 
 
     useEffect(() => {
-        if (!svgRef.current) return;
+        if (!svgRef.current || !data) return;
 
         const svg = d3.select(svgRef.current)
             .attr("width", "88%")
@@ -52,8 +55,9 @@ export const HistogramChart: FC<HistogramChartProps> = ({ data }) => {
             .attr("viewBox", `0 0 ${w} ${h}`)
             .style("background", "#c5f6fa");
 
-        const min = d3.min(data, d => +d[currentStat]);
-        const max = d3.max(data, d => +d[currentStat]);
+        const min = d3.min(data, d => +d[currentStat as keyof Temtem]!);
+        const max = d3.max(data, d => +d[currentStat as keyof Temtem]!);
+
 
         svg.selectAll("*").remove(); // Clear previous content
 
@@ -66,10 +70,10 @@ export const HistogramChart: FC<HistogramChartProps> = ({ data }) => {
             .style("font-size", "1.5rem")
             .text("Frequency");
 
-        const histogram = d3.histogram()
-            .value(d => +d[currentStat])
-            .domain([min, max])
-            .thresholds(d3.thresholdSturges(data.map(d => +d[currentStat])));
+        const histogram = d3.histogram<Temtem, number>()
+            .value(d => +d[currentStat as keyof Temtem]!)
+            .domain([min!, max!])
+            .thresholds(d3.thresholdSturges(data.map(d => +d[currentStat as keyof Temtem]!) as number[]));
 
         const bins = histogram(data);
 
@@ -80,12 +84,12 @@ export const HistogramChart: FC<HistogramChartProps> = ({ data }) => {
 
         const maxBin = d3.max(bins, d => d.length);
         const y = d3.scaleLinear()
-            .domain([0, maxBin])
+            .domain([0, maxBin!])
             .range([h-50, 50]);
 
-        const colorScale = d3.scaleOrdinal()
-            .domain(bins.map(d => d.x0))
-            .range(bins.map(d => getColor(d.x0)));
+        const colorScale = d3.scaleOrdinal<string, string>()
+            .domain(bins.map(d => `${d.x0}-${d.x1}`))
+            .range(bins.map(d => getColor(typeof d.x0 === "number" ? d.x0 : 0)));
 
         const xAxis = d3.axisBottom(x);
         const yAxis = d3.axisLeft(y);
@@ -124,20 +128,20 @@ export const HistogramChart: FC<HistogramChartProps> = ({ data }) => {
                 });
         };
 
-        svg.selectAll(".hist-bar")
+        svg.selectAll<SVGRectElement, Bin<Temtem, number>>(".hist-bar") // Specify element type as SVGRectElement
             .data(bins)
-            .join(
+            .join<SVGRectElement>(
                 enter => enter.append('rect')
                     .attr("class", "hist-bar")
-                    .attr("x", d => x(`${d.x0}-${d.x1}`) + 35)
+                    .attr("x", (d: Bin<Temtem, number>) => x(`${d.x0}-${d.x1}`)! + 35)
                     .attr("y", h - 50)
                     .attr("width", x.bandwidth() - 30)
                     .attr("height", 0)
-                    .attr("fill", d => colorScale(0))
+                    .attr("fill", () => colorScale("0"))
                     .transition()
                     .duration(1200)
                     .attr("y", d => y(d.length))
-                    .attr("fill", d => colorScale(d.x0))
+                    .attr("fill", d => colorScale(String(d.x0 || 0)))
                     .attr("height", d => h -50- y(d.length))
                     .on("end", addDashedBorder),
                 exit => exit
@@ -154,8 +158,7 @@ export const HistogramChart: FC<HistogramChartProps> = ({ data }) => {
                 <select
                     id="stat-select"
                     value={currentStat}
-                    onChange={e => setCurrentStat(e.target.value)}
-                >
+                    onChange={e => setCurrentStat(e.target.value as keyof Temtem)}                >
                     {statsOptions.map(option => (
                         <option key={option} value={option}>
                             {option}

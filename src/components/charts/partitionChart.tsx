@@ -1,4 +1,4 @@
-import React, { FC, useEffect, useRef } from "react";
+import {FC, useEffect, useRef} from "react";
 import * as d3 from 'd3';
 
 // Define the type for the data prop
@@ -6,6 +6,7 @@ interface FinancialSheetChild {
     name: string;
     value?: number;
     children?: FinancialSheetChild[];
+    _initialFontSize?: string;
 }
 
 interface FinancialSheet {
@@ -22,7 +23,7 @@ interface FinancialNode extends d3.HierarchyRectangularNode<FinancialSheetChild>
 
 // Define the props interface
 interface PartitionChartProps {
-    data: FinancialSheet;
+    data: FinancialSheet | null;
 }
 
 export const PartitionChart: FC<PartitionChartProps> = ({ data }) => {
@@ -51,26 +52,25 @@ export const PartitionChart: FC<PartitionChartProps> = ({ data }) => {
             .sum(d => d.value || 0)
             .sort((a, b) => (b.value || 0) - (a.value || 0));
 
-        const makePartitions = d3.partition<FinancialSheetChild>()
+        const partition = d3.partition<FinancialSheetChild>()
             .size([height - 50, width - 50])
             .padding(1)
             .round(true);
 
         const color = d3.scaleOrdinal(d3.schemeSet2);
 
-        makePartitions(root);
-
+        const rootWithPartition = partition(root) as FinancialNode;
         // Create a group to contain the chart
         const chartGroup = svg.append("g");
 
         // Render groups containing partition and text
         const groups = chartGroup.selectAll<SVGGElement, FinancialNode>("g")
-            .data(root.descendants())
+            .data(rootWithPartition.descendants())
             .join(
                 enter => {
-                    const g = enter.append("g")
+                    return enter.append("g")
                         .attr("transform", d => `translate(${d.y0 + 25},${d.x0 + 25})`)
-                        .on("mouseover", function (event, d) {
+                        .on("mouseover", function (_, d: FinancialNode) {
                             d3.select(this).raise(); // Bring the group to the front
                             const rect = d3.select(this).select<SVGRectElement>("rect");
                             const text = d3.select(this).select<SVGTextElement>("text");
@@ -78,29 +78,25 @@ export const PartitionChart: FC<PartitionChartProps> = ({ data }) => {
                                 .duration(200)
                                 .attr("x", -5)
                                 .attr("y", -5)
-                                .attr("width", d => (d.y1 - d.y0) + 10)
-                                .attr("height", d => (d.x1 - d.x0) + 10);
+                                .attr("width", (d.y1 - d.y0) + 10)
+                                .attr("height", (d.x1 - d.x0) + 10);
                             text.transition()
                                 .duration(200)
                                 .style("font-size", "14px"); // Increase font size on hover
                         })
-                        .on("mouseout", function (event, d) {
+                        .on("mouseout", function (_, d: FinancialNode) {
                             const rect = d3.select(this).select<SVGRectElement>("rect");
                             const text = d3.select(this).select<SVGTextElement>("text");
                             rect.transition()
                                 .duration(200)
                                 .attr("x", 0)
                                 .attr("y", 0)
-                                .attr("width", d => d.y1 - d.y0)
-                                .attr("height", d => d.x1 - d.x0);
+                                .attr("width", d.y1 - d.y0)
+                                .attr("height", d.x1 - d.x0);
                             text.transition()
                                 .duration(200)
-                                .style("font-size", d => {
-                                    // Use the stored initial font size
-                                    return (d.data as any)._initialFontSize;
-                                });
+                                .style("font-size", d.data._initialFontSize || "11px");
                         });
-                    return g;
                 },
                 update => update,
                 exit => exit.remove()
@@ -113,7 +109,7 @@ export const PartitionChart: FC<PartitionChartProps> = ({ data }) => {
             .attr("y", 0)
             .attr("width", d => d.y1 - d.y0)
             .attr("height", d => d.x1 - d.x0)
-            .style('fill', d => color(d.depth));
+            .style('fill', d => color(String(d.depth)));
 
         // Render text labels within groups
         groups.append("text")
@@ -128,47 +124,78 @@ export const PartitionChart: FC<PartitionChartProps> = ({ data }) => {
                 const partitionArea = width * height;
                 const fontSize = Math.min(11, partitionArea / 200); // Adjust the divisor as needed
                 // Store the initial font size in the data
-                (d.data as any)._initialFontSize = `${fontSize}px`;
-                return fontSize;
+                d.data._initialFontSize = `${fontSize}px`;
+                return `${fontSize}px`;
             })
             .attr("text-anchor", "middle");
 
         // Implement zoom behavior
-        const zoom = d3.zoom<SVGSVGElement, any>()
-            .scaleExtent([1, maxScale])
-            .on("zoom", (event) => {
-                // Apply the transform
-                const transform = event.transform.k === 1
-                    ? `translate(0,0) scale(1)`
-                    : `translate(-60,-60) scale(${event.transform.k})`;
-                chartGroup.attr("transform", transform);
-            });
+        // const zoom = d3.zoom<SVGSVGElement, FinancialNode>()
+        //     .scaleExtent([1, maxScale])
+        //     .on("zoom", (event) => {
+        //         // Apply the transform
+        //         const transform = event.transform.k === 1
+        //             ? `translate(0,0) scale(1)`
+        //             : `translate(-60,-60) scale(${event.transform.k})`;
+        //         chartGroup.attr("transform", transform);
+        //     });
+
+
 
 
 
         const svgSelection = d3.select(svgRef.current);
 
         const handleResize = () => {
-            if (window.innerWidth <= 650 && !isAtMaxScale()) {
+            let scaleFactor = 1;
+            if (window.innerWidth <= 650 &&!isAtMaxScale()) {
                 console.log("resize");
-                svgSelection.transition()
-                    .duration(500) // Optional: Add transition duration
-                    .call(zoom.transform, d3.zoomIdentity.scale(maxScale));
+                scaleFactor = maxScale;
+            } else if (window.innerWidth > 650 && window.innerWidth <= 800) {
+                console.log('normal scale');
+                scaleFactor = 1;
             }
-            //i only want to do once and then the carousel item size will handle the rest
-            else if( window.innerWidth > 650 && window.innerWidth <= 800){
-                 console.log('normal scale');
-                svgSelection.transition()
-                    .duration(500) // Optional: Add transition duration
-                    .call(zoom.transform, d3.zoomIdentity.scale(1));
+
+            // Check if the SVG node exists before proceeding
+            const svgNode = svgSelection.node();
+            if (!svgNode) {
+                console.error("SVG node is not available.");
+                return; // Exit early if the SVG node is not found
             }
+
+            const currentTransform = d3.zoomTransform(svgNode);
+            const targetTransform = d3.zoomIdentity.translate(0, 0).scale(scaleFactor);
+
+            svgSelection.transition()
+                .duration(500) // Optional: Add transition duration
+                .attrTween("transform", () => {
+                    // Interpolate between the current transform and the target transform
+                    return (intermediate) => {
+                        return `translate(${currentTransform.x + (targetTransform.x - currentTransform.x) * intermediate}, 
+                ${currentTransform.y + (targetTransform.y - currentTransform.y) * intermediate}) 
+                scale(${currentTransform.k + (targetTransform.k - currentTransform.k) * intermediate})`;
+                    };
+                });
         };
 
+
+
         const isAtMaxScale = () => {
-            const currentTransform = d3.zoomTransform(svgSelection.node());
+            // Attempt to get the SVG node
+            const svgNode = svgSelection.node();
+
+            // Check if the SVG node exists before proceeding
+            if (!svgNode) {
+                console.error("SVG node is not available.");
+                return false; // Return false if the SVG node is not found
+            }
+
+            // Proceed with getting the current transform if the node exists
+            const currentTransform = d3.zoomTransform(svgNode);
             const currentScale = currentTransform.k;
             return currentScale >= maxScale;
         };
+
 
 
         window.addEventListener('resize', handleResize);

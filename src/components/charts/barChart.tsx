@@ -1,11 +1,14 @@
 import { useRef, useEffect, useState, FC } from 'react';
 import * as d3 from 'd3';
-import legend from 'd3-svg-legend';
+import legend, {LegendColor} from 'd3-svg-legend';
+import {Temtem, types} from "@/lib/temtem.ts";
 
 
 interface BarChartProps {
-    data: any[]
+    data: Temtem[]
 }
+
+const tiers = ["S", "A", "B+", "B", "B-", "C", "D"];
 
 export const BarChart: FC<BarChartProps> = ({ data }) => {
     const svgRef = useRef<SVGSVGElement | null>(null);
@@ -13,9 +16,7 @@ export const BarChart: FC<BarChartProps> = ({ data }) => {
 
     const w = 620;
     const h = 500;
-    const tiers = ["S", "A", "B+", "B", "B-", "C", "D"];
-    const types = ["Neutral", "Mental", "Fire", "Nature", "Melee", "Earth",
-        "Water", "Digital", "Toxic", "Wind", "Electric", "Crystal"];
+
 
     useEffect(() => {
         if (!svgRef.current || !data) return;
@@ -89,38 +90,45 @@ export const BarChart: FC<BarChartProps> = ({ data }) => {
         svg.selectAll(".weakness-bar")
             .data(filteredData)
             .join(
-                enter => enter.append("rect")
-                    .attr("class", "weakness-bar")
-                    .attr("fill-opacity", 0.5)
-                    .attr("x", d => x(d.name) + 57.5)
-                    .attr("y", h / 2) // Start at the middle
-                    .attr("width", x.bandwidth() / 3)
-                    .attr("height", 0) // Start with height 0
-                    .attr("fill", d => colorScale(d.tier))
-                    .transition()
-                    .duration(500)
-                    .attr("y", d => yWeakness(d.weaknessCount)) // Animate to the correct y position
-                    .attr("height", d => h / 2 - yWeakness(d.weaknessCount)), // Animate to the correct height
+                enter => {
+                    const rects = enter.append("rect")
+                        .attr("class", "weakness-bar")
+                        .attr("fill-opacity", 0.5)
+                        .attr("x", d =>  x(d.name)! + 57.5)
+                        .attr("y", h / 2) // Start at the middle
+                        .attr("width", x.bandwidth() / 3)
+                        .attr("height", 0) // Start with height 0
+                        .attr("fill", d => colorScale(d.tier) as string);
+
+                    rects.transition()
+                        .duration(500)
+                        .attr("y", d => yWeakness(d.weaknessCount)) // Animate to the correct y position
+                        .attr("height", d => h / 2 - yWeakness(d.weaknessCount)); // Animate to the correct height
+
+                    return rects;
+                },
                 exit => exit.transition().remove()
             );
 
-// Bars for resistance count
+
+        // Bars for resistance count
         svg.selectAll(".resistance-bar")
             .data(filteredData)
             .join(
                 enter => enter.append("rect")
                     .attr("class", "resistance-bar")
                     .attr("fill-opacity", 0.5)
-                    .attr("x", d => x(d.name) + 47.5 + x.bandwidth() / 2)
+                    .attr("x", d => x(d.name)! + 47.5 + x.bandwidth() / 2)
                     .attr("y", h / 2) // Start at the middle
                     .attr("width", x.bandwidth() / 3)
                     .attr("height", 0) // Start with height 0
-                    .attr("fill", d => colorScale(d.tier))
-                    .transition()
-                    .duration(500)
-                    .attr("height", d => yResistance(d.resistanceCount) - h / 2) // Animate to the correct height
-                    .attr("y", h / 2), // Animate to the correct y position
-                exit => exit.transition().remove()
+                    .attr("fill", d => colorScale(d.tier) as string)
+                    .call(enter => enter.transition()
+                        .duration(500)
+                        .attr("height", d => yResistance(d.resistanceCount) - h / 2) // Animate to the correct height
+                        .attr("y", h / 2)), // Animate to the correct y position
+                update => update,
+                exit => exit.remove()
             );
 
 
@@ -131,17 +139,18 @@ export const BarChart: FC<BarChartProps> = ({ data }) => {
             .attr("transform", "rotate(-45)")
             .style("text-anchor", "end");
 
-        const legendOrdinal = legend.legendColor()
-            .scale(colorScale)
-            .shape("path", d3.symbol().type(d3.symbolSquare).size(150)())
-            .shapePadding(10)
-            .labelOffset(10)
-            .orient("horizontal");
+        //legend
+        const legendOrdinal = legend.legendColor() as LegendColor; // Cast to the expected type
+        legendOrdinal.shape("path", d3.symbol().type(d3.symbolSquare).size(150)() as string);
+        legendOrdinal.shapePadding(10);
+        legendOrdinal.labelOffset(10);
+        legendOrdinal.orient("horizontal");
+        legendOrdinal.scale(colorScale);
 
         svg.append("g")
             .attr("fill-opacity", 0.5)
             .attr("transform", `translate(${(w /2)-200}, 20)`)
-            .call(legendOrdinal);
+            .call(legendOrdinal as unknown as (selection: d3.Selection<SVGGElement, unknown, null, undefined>) => void);
 
     }, [data, currentType]);
 
