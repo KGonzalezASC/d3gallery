@@ -310,8 +310,11 @@ export const BtcRealTimePrice = ({ currentIndex }: { currentIndex: number }) => 
         let isMounted = true; // Flag to prevent state updates after unmount
         const fetchBtcPrice = async () => {
             try {
-                const response = await fetch('/btc');
-                if (!response.ok) {
+                 const response = await fetch(
+                    import.meta.env.MODE === 'production'
+                        ? 'https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=USD'
+                        : '/btc'
+                );                if (!response.ok) {
                     throw new Error(`HTTP error status: ${response.status}`);
                 }
                 const data = await response.json();
