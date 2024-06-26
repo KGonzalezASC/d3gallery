@@ -45,12 +45,24 @@ export const useLineChartData = (currentIndex: number) => {
 export const fetchSteamDataViaProxy = async () => {
     const apiKey = import.meta.env.VITE_STEAM_API_KEY; // Importing the API key from the environment variables
     const steamProfile = import.meta.env.VITE_STEAM_PROFILE;
+    const steamApiUrl = `https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=${apiKey}&steamid=${steamProfile}&include_appinfo=true&include_played_free_games=true`;
 
-    const url = `/steam-api/IPlayerService/GetOwnedGames/v0001/?key=${apiKey}&steamid=${steamProfile}&include_appinfo=true&include_played_free_games=true`;
+    let url;
+    if (import.meta.env.MODE === 'production') {
+        const proxyUrl = 'https://corsproxy.io/?';
+        url = proxyUrl + steamApiUrl;
+    } else {
+        console.log('development mode request');
+        url = `/steam-api/IPlayerService/GetOwnedGames/v0001/?key=${apiKey}&steamid=${steamProfile}&include_appinfo=true&include_played_free_games=true`;
+    }
 
     const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
     return await response.json();
 };
+
 
 // Helper function to clean game data and convert playtime to hours
 export const cleanGameData = (game: { [x: string]: number; }) => {
