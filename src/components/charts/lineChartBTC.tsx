@@ -106,9 +106,10 @@ const LineChartBTC: FC<LineChartProps> = ({ data }) => {
         <>
             <svg ref={svgRef}></svg>
             <button
-                className="px-4 py-1 mt-6 bg-blue-500 text-white text-xs rounded hover:bg-blue-700  md:w-auto"
-                onClick={() => console.log('Button clicked')}>
-                Click me
+                className="px-4 py-1 mt-[3.25rem] bg-blue-500 text-white text-xs rounded hover:bg-blue-700  md:w-auto"
+                //make go to link : https://unmineable.com/?algorithm=xelishash
+                onClick={() => window.open("https://unmineable.com/", "_blank")}>
+                Setup your miner
             </button>
         </>
     );

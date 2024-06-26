@@ -123,10 +123,10 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-@media (prefers-color-scheme: light) {
+@media (prefers-color-scheme: dark) {
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    color: rgba(146, 136, 136, 0.87);
+    background-color:#383535;
   }
   a:hover {
     color: #747bff;

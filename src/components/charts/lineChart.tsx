@@ -97,11 +97,6 @@ const LineChart: FC<LineChartProps> = ({ data }) => {
     return (
         <>
             <svg ref={svgRef}></svg>
-            <button
-                className="px-4 py-1 mt-6 bg-blue-500 text-white text-xs rounded hover:bg-blue-700  md:w-auto"
-                onClick={() => console.log('Button clicked')}>
-                Click me
-            </button>
         </>
     );
 };

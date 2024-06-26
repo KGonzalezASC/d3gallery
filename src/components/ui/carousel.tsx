@@ -132,14 +132,21 @@ const Carousel = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEl
 Carousel.displayName = "Carousel"
 
 const CarouselContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => {
-    const { carouselRef, orientation, isScrolling } = useCarousel()
+    const { carouselRef, orientation, isScrolling } = useCarousel();
+    const userAgent = navigator.userAgent || navigator.vendor ;
+    const isMobile = /android/i.test(userAgent) || /iPad|iPhone|iPod/.test(userAgent);
+
+
     return (
         <div ref={carouselRef} className="overflow-hidden max-w-full h-[26rem]  carousel-spacer:h-[40rem]  mb-4 ">
             <div
                 ref={ref}
                 className={cn(
                     //GOT IT also ty p-0
-                    isScrolling ? "p-full duration-500" : "p-[.019rem] duration-1050",
+                    //change duration on mobile?
+                    isScrolling
+                        ? `${isMobile? 'p-[.19rem] duration-150' : 'p-full duration-500'}`
+                        : "p-[.019rem] duration-1050",
                     "flex gap-[32rem] transition-transform pb-0 ",
                     orientation === "horizontal" ? "flex-row" : "flex-col",
                     className

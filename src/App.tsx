@@ -202,6 +202,8 @@ const App: React.FC = () => {
                                rel="noopener noreferrer">observable notebook</a>.
                             <br/>
                             This chart in particular bins the stat distribution of the monster battler game temtem to see how the game developers have balanced the game.
+                            <br/>
+                            <a href={"https://github.com/KGonzalezASC/temtem-data-creator"} target="_blank" rel="noopener noreferrer">Here is the node project where I handled the data collection and cleaning.</a>
                         </span>
 
                     }
@@ -214,6 +216,9 @@ const App: React.FC = () => {
                                rel="noopener noreferrer">observable notebook</a>.
                             <br/>
                             This chart uses the same stat data to tell a different story and paint how being numerically stronger does not translate in to actual viability. and what are the common ranges for certain tiers to fall under.
+                            <br/>
+                            <a href={"https://github.com/KGonzalezASC/temtem-data-creator"} target="_blank"
+                               rel="noopener noreferrer">Here is the node project where I handled the data collection and cleaning.</a>
                         </span>
 
                     }
@@ -226,9 +231,12 @@ const App: React.FC = () => {
                                rel="noopener noreferrer">observable notebook</a>.
                             <br/>
                             This bar chart explores another concept of viability by comparing a temtem defensive quality to their actual viablility. While there are rules set with how types affect one another the actual matrix and how each object derives its defensive from that matrix was done in this node project below where I handled the data collection and cleaning:
+                            <br/>
+                            <a href={"https://github.com/KGonzalezASC/temtem-data-creator"} target="_blank"
+                               rel="noopener noreferrer">Temtem-data-creator.</a>
                         </span>
                     }
-                    {current === 5 && "Line chart of example"}
+                    {current === 5 && "Line chart  example"}
                     {current === 7 &&
                         <span>
                             This chart is based on a project I’ve done for my Data Visualization class retooled to work with react.
